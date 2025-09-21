@@ -5,6 +5,8 @@ const issueSchema = new mongoose.Schema({
   description: String,
   location: String,
   category: String,
+  imagePath: String,
+  status: { type: String, default: 'Pending' },
   createdAt: { type: Date, default: Date.now },
 });
 
