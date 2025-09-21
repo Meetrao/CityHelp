@@ -2,6 +2,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import ReportIssue from './pages/ReportIssue';
+import Leaderboard from './pages/Leaderboard';
+import AdminPanel from './pages/AdminPanel';
+import MapView from './pages/MapView';
 import Header from './components/Header';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -26,6 +29,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ReportIssue />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/leaderboard" 
+              element={
+                <ProtectedRoute>
+                  <Leaderboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/map" 
+              element={
+                <ProtectedRoute>
+                  <MapView />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute>
+                  <AdminPanel />
                 </ProtectedRoute>
               } 
             />

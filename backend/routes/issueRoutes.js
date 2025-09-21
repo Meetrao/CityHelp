@@ -2,7 +2,15 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const multer = require('multer');
-const { reportIssue, getAllIssues } = require('../controllers/issueController');
+const { 
+  reportIssue, 
+  getAllIssues, 
+  getUserIssues, 
+  updateIssueStatus, 
+  deleteIssue 
+} = require('../controllers/issueController');
+const { verifyToken, requireAdmin } = require('../middleware/auth');
+const { issueValidation } = require('../middleware/validation');
 
 const storage = multer.diskStorage({
   destination: 'uploads/',
@@ -13,7 +21,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Public routes
 router.get('/issues', getAllIssues);
-router.post('/report', upload.single('image'), reportIssue);
+
+// Protected routes
+router.get('/issues/user', verifyToken, getUserIssues);
+router.post('/report', verifyToken, upload.single('image'), issueValidation, reportIssue);
+router.put('/issues/:issueId/status', verifyToken, updateIssueStatus);
+router.delete('/issues/:issueId', verifyToken, deleteIssue);
+
+// Admin routes
+router.get('/admin/issues', verifyToken, requireAdmin, getAllIssues);
 
 module.exports = router;

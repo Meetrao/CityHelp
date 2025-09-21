@@ -1,7 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { login } = require('../controllers/authController');
+const { signup, login, getProfile } = require('../controllers/authController');
+const { signupValidation, loginValidation } = require('../middleware/validation');
+const { verifyToken } = require('../middleware/auth');
 
-router.post('/login', login);
+// Public routes
+router.post('/signup', signupValidation, signup);
+router.post('/login', loginValidation, login);
+
+// Protected routes
+router.get('/profile', verifyToken, getProfile);
 
 module.exports = router;

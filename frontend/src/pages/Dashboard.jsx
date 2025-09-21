@@ -1,21 +1,44 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
   const [issues, setIssues] = useState([]);
+  const [userIssues, setUserIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchIssues = async () => {
       try {
         setLoading(true);
-        const res = await fetch('http://localhost:5000/api/issues');
-        if (!res.ok) {
+        const token = localStorage.getItem('token');
+        
+        // Fetch all issues
+        const allRes = await fetch('http://localhost:5000/api/issues', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // Fetch user's issues
+        const userRes = await fetch('http://localhost:5000/api/issues/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!allRes.ok || !userRes.ok) {
           throw new Error('Failed to fetch issues');
         }
-        const data = await res.json();
-        setIssues(data);
+        
+        const allData = await allRes.json();
+        const userData = await userRes.json();
+        
+        setIssues(allData.issues || allData);
+        setUserIssues(userData);
       } catch (err) {
         console.error('Error fetching issues:', err);
         setError('Failed to load issues. Please try again.');
@@ -55,6 +78,21 @@ export default function Dashboard() {
     }
   };
 
+  const getCurrentIssues = () => {
+    switch (activeTab) {
+      case 'my':
+        return userIssues;
+      case 'pending':
+        return issues.filter(issue => issue.status === 'Pending');
+      case 'resolved':
+        return issues.filter(issue => issue.status === 'Resolved');
+      default:
+        return issues;
+    }
+  };
+
+  const currentIssues = getCurrentIssues();
+
   if (loading) {
     return (
       <div className="p-6">
@@ -73,7 +111,7 @@ export default function Dashboard() {
           <p className="text-gray-600">Monitor and manage reported city issues</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -82,6 +120,18 @@ export default function Dashboard() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Issues</p>
                 <p className="text-2xl font-bold text-gray-900">{issues.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <span className="text-2xl">👤</span>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">My Reports</p>
+                <p className="text-2xl font-bold text-gray-900">{userIssues.length}</p>
               </div>
             </div>
           </div>
@@ -116,14 +166,38 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-medium text-gray-900">Recent Issues</h2>
-            <Link
-              to="/report"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Report New Issue
-            </Link>
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium text-gray-900">Issues</h2>
+              <Link
+                to="/report"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Report New Issue
+              </Link>
+            </div>
+            
+            {/* Tabs */}
+            <div className="flex space-x-1">
+              {[
+                { id: 'all', label: 'All Issues', count: issues.length },
+                { id: 'my', label: 'My Reports', count: userIssues.length },
+                { id: 'pending', label: 'Pending', count: issues.filter(issue => issue.status === 'Pending').length },
+                { id: 'resolved', label: 'Resolved', count: issues.filter(issue => issue.status === 'Resolved').length }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </div>
           </div>
 
           {error ? (
@@ -136,15 +210,20 @@ export default function Dashboard() {
                 Retry
               </button>
             </div>
-          ) : issues.length === 0 ? (
+          ) : currentIssues.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
               <div className="text-4xl mb-4">📝</div>
-              <p className="text-lg mb-2">No issues reported yet</p>
-              <p className="text-sm">Be the first to report a city issue!</p>
+              <p className="text-lg mb-2">No issues found</p>
+              <p className="text-sm">
+                {activeTab === 'my' 
+                  ? "You haven't reported any issues yet. Start by reporting one!"
+                  : "No issues match your current filter."
+                }
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {issues.map((issue) => (
+              {currentIssues.map((issue) => (
                 <div key={issue._id} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

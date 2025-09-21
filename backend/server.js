@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const issueRoutes = require('./routes/issueRoutes');
 const authRoutes = require('./routes/authRoutes');
+const leaderboardRoutes = require('./routes/leaderboardRoutes');
 
 const app = express();
 app.use(cors());
@@ -19,8 +20,9 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('✅ Connected to MongoDB'))
 .catch((err) => console.error('MongoDB error:', err));
 
-app.use('/api', issueRoutes); // ✅ use imported routes directly
-app.use('/api/auth', authRoutes); // ✅ add auth routes
+app.use('/api', issueRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api', leaderboardRoutes);
 
 app.listen(5000, () => {
   console.log('🚀 Server running on http://localhost:5000');

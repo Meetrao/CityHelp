@@ -60,8 +60,12 @@ export default function ReportIssue() {
     }
 
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:5000/api/report', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: data,
       });
 
