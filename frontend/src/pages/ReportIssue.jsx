@@ -251,35 +251,3 @@ export default function ReportIssue() {
     </div>
   );
 }
-const data = new FormData();
-data.append('title', formData.title);
-data.append('description', formData.description);
-data.append('location', formData.location);
-if (formData.image) {
-  data.append('image', formData.image);
-}
-
-try {
-  const res = await fetch('http://localhost:5000/api/report', {
-    method: 'POST',
-    body: data,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Server error: ${res.status} - ${text}`);
-  }
-
-  const result = await res.json();
-  console.log('Submitted:', result);
-  setSuccess(true);
-  setFormData({
-    title: '',
-    description: '',
-    location: '',
-    image: null,
-  });
-} catch (error) {
-  console.error('Error submitting the form:', error.message);
-  setSuccess(false);
-}
