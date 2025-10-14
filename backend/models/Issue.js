@@ -14,14 +14,31 @@ const issueSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
+  // 🧠 New: Auto-classified category
   category: {
     type: String,
     required: true
   },
+
+  // 🧠 New: Auto-assigned department
+  department: {
+    type: String,
+    default: 'General'
+  },
+
+  // 🖼️ New: Store image as binary
+  imageData: {
+    data: Buffer,
+    contentType: String
+  },
+
+  // Optional legacy path (still supported)
   imagePath: {
     type: String,
     default: null
   },
+
   status: {
     type: String,
     enum: ['Pending', 'In Progress', 'Resolved', 'Closed'],
@@ -63,6 +80,5 @@ const issueSchema = new mongoose.Schema({
 issueSchema.index({ reportedBy: 1, status: 1 });
 issueSchema.index({ category: 1, status: 1 });
 issueSchema.index({ createdAt: -1 });
-
 
 module.exports = mongoose.model('Issue', issueSchema);

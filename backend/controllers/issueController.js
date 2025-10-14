@@ -1,28 +1,27 @@
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+const FormData = require('form-data');
+const { validationResult } = require('express-validator');
 const { classify } = require('../utils/classifier');
 const Issue = require('../models/Issue');
 const User = require('../models/User');
-const { validationResult } = require('express-validator');
-
-
-console.log("Received issue:", req.body);
-console.log("File info:", req.file);
 
 exports.getAllIssues = async (req, res) => {
   try {
     const { status, category, page = 1, limit = 10 } = req.query;
     const filter = {};
-    
     if (status) filter.status = status;
     if (category) filter.category = category;
-    
+
     const issues = await Issue.find(filter)
       .populate('reportedBy', 'name email')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
-    
+
     const total = await Issue.countDocuments(filter);
-    
+
     res.json({
       issues,
       totalPages: Math.ceil(total / limit),
@@ -39,13 +38,10 @@ exports.getUserIssues = async (req, res) => {
   try {
     const { status, category } = req.query;
     const filter = { reportedBy: req.user._id };
-    
     if (status) filter.status = status;
     if (category) filter.category = category;
-    
-    const issues = await Issue.find(filter)
-      .sort({ createdAt: -1 });
-    
+
+    const issues = await Issue.find(filter).sort({ createdAt: -1 });
     res.json(issues);
   } catch (err) {
     console.error('Error fetching user issues:', err);
@@ -63,31 +59,53 @@ exports.reportIssue = async (req, res) => {
   const imagePath = req.file ? req.file.path : null;
 
   try {
-    console.log('Classifying issue with description:', description);
-    const category = await classify(description);
-    console.log('Classified as:', category);
-    
+    let category = 'general';
+    if (imagePath) {
+      const form = new FormData();
+      form.append('image', fs.createReadStream(imagePath));
+      const response = await axios.post('http://localhost:5001/classify', form, {
+        headers: form.getHeaders()
+      });
+      category = response.data.category || 'general';
+    }
+
+    const departmentMap = {
+      pothole: 'Roads',
+      garbage: 'Sanitation',
+      wire: 'Electricity',
+      waterlogging: 'Drainage',
+      flood: 'Disaster Management',
+      signal: 'Traffic'
+    };
+    const department = departmentMap[category] || 'General';
+
+    let imageData = null;
+    if (imagePath) {
+      const buffer = fs.readFileSync(imagePath);
+      imageData = {
+        data: buffer,
+        contentType: req.file.mimetype
+      };
+    }
+
     const issue = new Issue({
       title,
       description,
       location,
       category,
-      imagePath,
+      department,
+      imageData,
       status: 'Pending',
       reportedBy: req.user._id
     });
 
     await issue.save();
-    
-    // Award points to user
-    const pointsAwarded = 10; // Base points for reporting
+
+    const pointsAwarded = 10;
     await User.findByIdAndUpdate(req.user._id, {
       $inc: { points: pointsAwarded }
     });
-    
-    console.log('Issue saved successfully:', issue._id);
-    console.log(`Awarded ${pointsAwarded} points to user ${req.user._id}`);
-    
+
     res.json({
       ...issue.toObject(),
       pointsAwarded
@@ -106,22 +124,22 @@ exports.updateIssueStatus = async (req, res) => {
   try {
     const { issueId } = req.params;
     const { status } = req.body;
-    
+
     const validStatuses = ['Pending', 'In Progress', 'Resolved', 'Closed'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
-    
+
     const issue = await Issue.findByIdAndUpdate(
       issueId,
       { status },
       { new: true }
     ).populate('reportedBy', 'name email');
-    
+
     if (!issue) {
       return res.status(404).json({ message: 'Issue not found' });
     }
-    
+
     res.json(issue);
   } catch (err) {
     console.error('Error updating issue status:', err);
@@ -132,17 +150,16 @@ exports.updateIssueStatus = async (req, res) => {
 exports.deleteIssue = async (req, res) => {
   try {
     const { issueId } = req.params;
-    
+
     const issue = await Issue.findById(issueId);
     if (!issue) {
       return res.status(404).json({ message: 'Issue not found' });
     }
-    
-    // Only allow deletion if user is admin or the issue reporter
+
     if (req.user.role !== 'admin' && issue.reportedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to delete this issue' });
     }
-    
+
     await Issue.findByIdAndDelete(issueId);
     res.json({ message: 'Issue deleted successfully' });
   } catch (err) {
@@ -151,3 +168,30 @@ exports.deleteIssue = async (req, res) => {
   }
 };
 
+exports.classifyImageHandler = async (req, res) => {
+  const imagePath = req.file ? req.file.path : null;
+
+  if (!imagePath) {
+    return res.status(400).json({ message: 'No image uploaded' });
+  }
+
+  try {
+    const form = new FormData();
+    form.append('image', fs.createReadStream(imagePath));
+
+    const response = await axios.post('http://localhost:5001/classify', form, {
+      headers: form.getHeaders()
+    });
+
+    const category = response.data.category || 'general';
+    console.log('Image classified as:', category);
+
+    res.json({ category });
+  } catch (err) {
+    console.error('Error classifying image:', err);
+    res.status(500).json({ 
+      message: 'Error classifying image', 
+      error: err.message 
+    });
+  }
+};

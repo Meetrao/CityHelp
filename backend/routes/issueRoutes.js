@@ -7,7 +7,8 @@ const {
   getAllIssues, 
   getUserIssues, 
   updateIssueStatus, 
-  deleteIssue 
+  deleteIssue,
+  classifyImageHandler // 🧠 New controller for testing classification
 } = require('../controllers/issueController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
 const { issueValidation } = require('../middleware/validation');
@@ -29,6 +30,9 @@ router.get('/issues/user', verifyToken, getUserIssues);
 router.post('/report', verifyToken, upload.single('image'), issueValidation, reportIssue);
 router.put('/issues/:issueId/status', verifyToken, updateIssueStatus);
 router.delete('/issues/:issueId', verifyToken, deleteIssue);
+
+// 🧪 Optional: Test classifier directly
+router.post('/issues/classify-image', verifyToken, upload.single('image'), classifyImageHandler);
 
 // Admin routes
 router.get('/admin/issues', verifyToken, requireAdmin, getAllIssues);

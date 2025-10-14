@@ -12,6 +12,9 @@ export default function ReportIssue() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [locationLoading, setLocationLoading] = useState(true);
+  const [predictedCategory, setPredictedCategory] = useState('');
+  const [classifying, setClassifying] = useState(false);
+  const [predictedDepartment, setPredictedDepartment] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,23 +37,64 @@ export default function ReportIssue() {
     setError('');
   };
 
-  const handleImage = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('Image size must be less than 5MB');
-        return;
-      }
-      setFormData({ ...formData, image: file });
-      setError('');
+  const handleImage = async (e) => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
     }
-  };
+    setFormData((prev) => ({ ...prev, image: file }));
+    setError('');
+    setPredictedCategory('');
+    setPredictedDepartment('');
+    setClassifying(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const form = new FormData();
+      form.append('image', file);
+
+      const res = await fetch('http://localhost:5000/api/issues/classify-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: form
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        const category = result.category;
+        setPredictedCategory(category);
+
+        const departmentMap = {
+          pothole: 'Roads',
+          garbage: 'Sanitation',
+          wire: 'Electricity',
+          waterlogging: 'Drainage',
+          flood: 'Disaster Management',
+          signal: 'Traffic'
+        };
+        const department = departmentMap[category] || 'General';
+        setPredictedDepartment(department);
+
+        // 🧠 Auto-fill description
+        const autoDesc = `Detected issue: ${category}. Assigned to ${department}.`;
+        setFormData((prev) => ({ ...prev, description: autoDesc }));
+      }
+    } catch (err) {
+      console.error('Error classifying image:', err);
+    } finally {
+      setClassifying(false);
+    }
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     const data = new FormData();
     data.append('title', formData.title);
     data.append('description', formData.description);
@@ -73,7 +117,6 @@ export default function ReportIssue() {
         const text = await res.text();
         throw new Error(`Server error: ${res.status}\n${text}`);
       }
-
       const result = await res.json();
       console.log('Submitted:', result);
       setSuccess(true);
@@ -83,8 +126,7 @@ export default function ReportIssue() {
         location: '',
         image: null,
       });
-      
-      // Redirect to dashboard after 2 seconds
+
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
@@ -108,8 +150,7 @@ export default function ReportIssue() {
       </div>
     );
   }
-
-  return (
+    return (
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-lg">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -224,6 +265,21 @@ export default function ReportIssue() {
                   className="h-32 w-32 object-cover rounded-lg"
                 />
                 <p className="text-sm text-gray-600 mt-1">{formData.image.name}</p>
+                {classifying && (
+                  <p className="text-sm text-blue-600 mt-1 animate-pulse">
+                    Classifying image...
+                  </p>
+                )}
+                {predictedCategory && (
+                  <p className="text-sm text-green-600 mt-1">
+                    Predicted Category: <strong>{predictedCategory}</strong>
+                  </p>
+                )}
+                {predictedDepartment && (
+                  <p className="text-sm text-purple-600 mt-1">
+                    Assigned Department: <strong>{predictedDepartment}</strong>
+                  </p>
+                )}
               </div>
             )}
           </div>
