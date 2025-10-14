@@ -64,4 +64,5 @@ issueSchema.index({ reportedBy: 1, status: 1 });
 issueSchema.index({ category: 1, status: 1 });
 issueSchema.index({ createdAt: -1 });
 
+
 module.exports = mongoose.model('Issue', issueSchema);

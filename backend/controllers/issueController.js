@@ -3,6 +3,10 @@ const Issue = require('../models/Issue');
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
 
+
+console.log("Received issue:", req.body);
+console.log("File info:", req.file);
+
 exports.getAllIssues = async (req, res) => {
   try {
     const { status, category, page = 1, limit = 10 } = req.query;
@@ -146,3 +150,4 @@ exports.deleteIssue = async (req, res) => {
     res.status(500).json({ message: 'Error deleting issue', error: err.message });
   }
 };
+

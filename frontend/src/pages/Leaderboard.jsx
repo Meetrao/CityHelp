@@ -9,6 +9,12 @@ export default function Leaderboard() {
   const { user } = useAuth();
 
   useEffect(() => {
+  axios.get('/api/leaderboard')
+    .then(res => setUsers(res.data))
+    .catch(err => console.error("Leaderboard fetch error:", err));
+}, []);
+
+  useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
         setLoading(true);
