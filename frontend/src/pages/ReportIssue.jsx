@@ -1,14 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-const markerIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
 
 export default function ReportIssue() {
   const [formData, setFormData] = useState({
@@ -75,12 +66,9 @@ export default function ReportIssue() {
         if (res.ok) {
           const result = await res.json();
           const category = result.category;
-          console.log('Raw category from model:', category);
           setPredictedCategory(category);
 
           const normalizedCategory = category.toLowerCase().replace(/\s+/g, '');
-          console.log('Normalized category key:', normalizedCategory);
-
           const departmentMap = {
             pothole: 'Roads',
             potholeissues: 'Roads',
@@ -96,9 +84,7 @@ export default function ReportIssue() {
             openmanhole: 'Drainage',
             treefall: 'Environment'
           };
-
           const department = departmentMap[normalizedCategory] || 'General';
-          console.log('Assigned department:', department);
           setPredictedDepartment(department);
 
           const autoDesc = `Detected issue: ${category}. Assigned to ${department}.`;
@@ -170,25 +156,6 @@ export default function ReportIssue() {
     }
   };
 
-  const renderMap = () => {
-    try {
-      const [lat, lng] = formData.location.split(',').map(coord => parseFloat(coord.trim()));
-      return (
-        <div className="mt-4">
-          <MapContainer center={[lat, lng]} zoom={16} scrollWheelZoom={false} style={{ height: '250px', width: '100%' }}>
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
-            />
-            <Marker position={[lat, lng]} icon={markerIcon} />
-          </MapContainer>
-        </div>
-      );
-    } catch {
-      return null;
-    }
-  };
-
   if (success) {
     return (
       <div className="max-w-2xl mx-auto p-6">
@@ -238,8 +205,6 @@ export default function ReportIssue() {
             disabled={locationLoading}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           />
-
-          {renderMap()}
 
           <input
             type="file"

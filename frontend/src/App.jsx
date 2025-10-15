@@ -10,6 +10,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import 'leaflet/dist/leaflet.css';
 
 
+
 function App() {
   return (
     <AuthProvider>
