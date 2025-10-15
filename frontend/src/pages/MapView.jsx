@@ -78,8 +78,8 @@ export default function MapView() {
 
         const issuesWithCoords = issuesData.map(issue => {
           let coords = null;
-          if (issue.location && issue.location.includes(',')) {
-            const [lat, lng] = issue.location.split(',').map(coord => parseFloat(coord.trim()));
+          if (issue.location && issue.location.coordinates) {
+            const [lng, lat] = issue.location.coordinates;
             if (!isNaN(lat) && !isNaN(lng)) {
               coords = { lat, lng };
             }
@@ -249,7 +249,9 @@ export default function MapView() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-500">Location</label>
-                      <p className="text-sm text-gray-900">{selectedIssue.location}</p>
+                      <p className="text-sm text-gray-900">
+                        {selectedIssue.location?.coordinates?.join(', ') || 'Unknown'}
+                      </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Category</label>

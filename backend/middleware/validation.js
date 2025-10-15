@@ -6,18 +6,18 @@ const signupValidation = [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Name must be between 2 and 50 characters'),
-  
+
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email'),
-  
+
   body('password')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
-  
+
   body('role')
     .optional()
     .isIn(['citizen', 'admin'])
@@ -30,7 +30,7 @@ const loginValidation = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email'),
-  
+
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -42,20 +42,28 @@ const issueValidation = [
     .trim()
     .isLength({ min: 5, max: 100 })
     .withMessage('Title must be between 5 and 100 characters'),
-  
+
   body('description')
     .trim()
     .isLength({ min: 10, max: 1000 })
     .withMessage('Description must be between 10 and 1000 characters'),
-  
-  body('location')
-    .trim()
+
+  body('latitude')
     .notEmpty()
-    .withMessage('Location is required')
+    .withMessage('Latitude is required')
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be a valid number'),
+
+  body('longitude')
+    .notEmpty()
+    .withMessage('Longitude is required')
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be a valid number')
 ];
 
 module.exports = {
   signupValidation,
   loginValidation,
-  issueValidation
+  issueValidation,
+  validationResult
 };
