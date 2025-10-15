@@ -1,373 +1,232 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Pie, Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement
+} from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 export default function AdminPanel() {
   const [issues, setIssues] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState('all');
-  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [loadingIssues, setLoadingIssues] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [error, setError] = useState('');
   const { user } = useAuth();
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
     const fetchIssues = async () => {
+      if (!token) return console.error('No token found');
       try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        
+        setLoadingIssues(true);
         const res = await fetch(`http://localhost:5000/api/admin/issues?status=${filter}`, {
           headers: {
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           }
         });
-
-        if (!res.ok) {
-          throw new Error('Failed to fetch issues');
-        }
-
         const data = await res.json();
-        setIssues(data.issues || data);
+        setIssues(data.issues || []);
       } catch (err) {
         console.error('Error fetching issues:', err);
-        setError('Failed to load issues. Please try again.');
+        setError('Failed to load issues');
       } finally {
-        setLoading(false);
+        setLoadingIssues(false);
+      }
+    };
+
+    const fetchUsers = async () => {
+      if (!token) return console.error('No token found');
+      try {
+        setLoadingUsers(true);
+        const res = await fetch('http://localhost:5000/api/users', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        setUsers(data.users || []);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError('Failed to load users');
+      } finally {
+        setLoadingUsers(false);
       }
     };
 
     fetchIssues();
+    setTimeout(fetchUsers, 500);
   }, [filter]);
 
-  const updateIssueStatus = async (issueId, newStatus) => {
+  const filteredIssues = useMemo(() => {
+    return filter === 'all'
+      ? issues
+      : issues.filter(i => i.status?.toLowerCase() === filter.toLowerCase());
+  }, [issues, filter]);
+
+  const changeUserRole = async (userId, newRole) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/issues/${issueId}/status`, {
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ role: newRole })
       });
-
-      if (!res.ok) {
-        throw new Error('Failed to update issue status');
-      }
-
-      // Update local state
-      setIssues(issues.map(issue => 
-        issue._id === issueId ? { ...issue, status: newStatus } : issue
-      ));
-      
-      setSelectedIssue(null);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update role');
+      setUsers(users.map(u => u._id === userId ? { ...u, role: newRole } : u));
     } catch (err) {
-      console.error('Error updating issue:', err);
-      setError('Failed to update issue status');
+      console.error('Error updating role:', err);
+      alert('Failed to update role');
     }
   };
 
-  const deleteIssue = async (issueId) => {
-    if (!window.confirm('Are you sure you want to delete this issue?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/issues/${issueId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to delete issue');
-      }
-
-      // Update local state
-      setIssues(issues.filter(issue => issue._id !== issueId));
-      setSelectedIssue(null);
-    } catch (err) {
-      console.error('Error deleting issue:', err);
-      setError('Failed to delete issue');
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'In Progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'Resolved':
-        return 'bg-green-100 text-green-800';
-      case 'Closed':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-red-100 text-red-800';
-      case 'High':
-        return 'bg-orange-100 text-orange-800';
-      case 'Medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Redirect if not admin
   if (user?.role !== 'admin') {
-    return (
-      <div className="p-6">
-        <div className="max-w-md mx-auto text-center">
-          <div className="text-6xl mb-4">🚫</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You need admin privileges to access this page.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    );
+    return <div className="p-6 text-center text-red-600">Access denied. Admins only.</div>;
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Panel</h1>
-          <p className="text-gray-600">Manage and moderate city issues</p>
-        </div>
+    <div className="p-6 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
 
-        {/* Filter Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex space-x-1">
-              {[
-                { id: 'all', label: 'All Issues', count: issues.length },
-                { id: 'Pending', label: 'Pending', count: issues.filter(issue => issue.status === 'Pending').length },
-                { id: 'In Progress', label: 'In Progress', count: issues.filter(issue => issue.status === 'In Progress').length },
-                { id: 'Resolved', label: 'Resolved', count: issues.filter(issue => issue.status === 'Resolved').length }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setFilter(tab.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    filter === tab.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {tab.label} ({tab.count})
-                </button>
+      {/* Filter Tabs */}
+      <div className="flex gap-4 mb-6">
+        {['all', 'Pending', 'In Progress', 'Resolved', 'Closed'].map(status => (
+          <button
+            key={status}
+            onClick={() => setFilter(status)}
+            className={`px-4 py-2 rounded ${
+              filter === status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {/* Issues Table */}
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold mb-4">Reported Issues</h2>
+        {loadingIssues ? (
+          <div>Loading issues...</div>
+        ) : (
+          <table className="w-full border">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">Title</th>
+                <th className="p-2 text-left">Status</th>
+                <th className="p-2 text-left">Category</th>
+                <th className="p-2 text-left">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredIssues.map(issue => (
+                <tr key={issue._id} className="border-t">
+                  <td className="p-2">{issue.title}</td>
+                  <td className="p-2">{issue.status}</td>
+                  <td className="p-2">{issue.category}</td>
+                  <td className="p-2">{new Date(issue.createdAt).toLocaleDateString()}</td>
+                </tr>
               ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Issues Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {error ? (
-            <div className="p-6 text-center">
-              <div className="text-red-600 mb-4">{error}</div>
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Retry
-              </button>
-            </div>
-          ) : issues.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              <div className="text-4xl mb-4">📋</div>
-              <p className="text-lg mb-2">No issues found</p>
-              <p className="text-sm">No issues match your current filter.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Issue
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Reporter
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Priority
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {issues.map((issue) => (
-                    <tr key={issue._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12">
-                            {issue.imagePath ? (
-                              <img
-                                className="h-12 w-12 rounded-lg object-cover"
-                                src={`http://localhost:5000/${issue.imagePath}`}
-                                alt="Issue"
-                              />
-                            ) : (
-                              <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                <span className="text-gray-400">📷</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {issue.title}
-                            </div>
-                            <div className="text-sm text-gray-500 truncate max-w-xs">
-                              {issue.description}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {issue.location}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {issue.reportedBy?.name || 'Unknown'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {issue.reportedBy?.email || ''}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
-                          {issue.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(issue.priority)}`}>
-                          {issue.priority || 'Medium'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(issue.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <select
-                            value={issue.status}
-                            onChange={(e) => updateIssueStatus(issue._id, e.target.value)}
-                            className="text-xs border border-gray-300 rounded px-2 py-1"
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Resolved">Resolved</option>
-                            <option value="Closed">Closed</option>
-                          </select>
-                          <button
-                            onClick={() => setSelectedIssue(issue)}
-                            className="text-blue-600 hover:text-blue-900 text-xs"
-                          >
-                            View
-                          </button>
-                          <button
-                            onClick={() => deleteIssue(issue._id)}
-                            className="text-red-600 hover:text-red-900 text-xs"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Issue Detail Modal */}
-        {selectedIssue && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Issue Details
-                  </h3>
-                  <button
-                    onClick={() => setSelectedIssue(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900">{selectedIssue.title}</h4>
-                    <p className="text-gray-600 mt-1">{selectedIssue.description}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Location</label>
-                      <p className="text-sm text-gray-900">{selectedIssue.location}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Category</label>
-                      <p className="text-sm text-gray-900">{selectedIssue.category}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Reporter</label>
-                      <p className="text-sm text-gray-900">{selectedIssue.reportedBy?.name}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Date</label>
-                      <p className="text-sm text-gray-900">
-                        {new Date(selectedIssue.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {selectedIssue.imagePath && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Image</label>
-                      <img
-                        src={`http://localhost:5000/${selectedIssue.imagePath}`}
-                        alt="Issue"
-                        className="mt-2 rounded-lg max-w-full h-64 object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+            </tbody>
+          </table>
         )}
+      </div>
+
+      {/* Users Table */}
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold mb-4">User Accounts</h2>
+        {loadingUsers ? (
+          <div>Loading users...</div>
+        ) : (
+          <table className="w-full border">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">Name</th>
+                <th className="p-2 text-left">Email</th>
+                <th className="p-2 text-left">Role</th>
+                <th className="p-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u._id} className="border-t">
+                  <td className="p-2">{u.name}</td>
+                  <td className="p-2">{u.email}</td>
+                  <td className="p-2">{u.role}</td>
+                  <td className="p-2">
+                    <select
+                      value={u.role}
+                      onChange={e => changeUserRole(u._id, e.target.value)}
+                      className="border rounded px-2 py-1"
+                    >
+                      <option value="citizen">Citizen</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Pie Chart */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium mb-4">Issue Status Breakdown</h3>
+          <Pie
+            data={{
+              labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
+              datasets: [{
+                data: [
+                  issues.filter(i => i.status?.toLowerCase() === 'pending').length,
+                  issues.filter(i => i.status?.toLowerCase() === 'in progress').length,
+                  issues.filter(i => i.status?.toLowerCase() === 'resolved').length,
+                  issues.filter(i => i.status?.toLowerCase() === 'closed').length
+                ],
+                backgroundColor: ['#facc15', '#3b82f6', '#22c55e', '#9ca3af']
+              }]
+            }}
+            options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }}
+          />
+        </div>
+
+        {/* Bar Chart */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium mb-4">Issues by Category</h3>
+          <Bar
+            data={{
+              labels: [...new Set(issues.map(i => i.category))],
+              datasets: [{
+                label: 'Count',
+                data: [...new Set(issues.map(i => i.category))].map(cat =>
+                  issues.filter(i => i.category === cat).length
+                ),
+                backgroundColor: '#3b82f6'
+              }]
+            }}
+            options={{
+              responsive: true,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true } }
+            }}
+          />
+        </div>
       </div>
     </div>
   );

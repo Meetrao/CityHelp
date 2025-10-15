@@ -4,9 +4,10 @@ const User = require('../models/User');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+const generateToken = (userId, role) => {
+  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '7d' });
 };
+
 
 // Verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -39,8 +40,19 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+const requireRole = (role) => {
+  return (req, res, next) => {
+    if (req.user.role !== role) {
+      return res.status(403).json({ message: `Access denied. ${role} role required.` });
+    }
+    next();
+  };
+};
+
+
 module.exports = {
   generateToken,
   verifyToken,
-  requireAdmin
+  requireAdmin,
+  requireRole
 };

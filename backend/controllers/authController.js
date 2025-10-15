@@ -28,8 +28,8 @@ exports.signup = async (req, res) => {
 
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate token with role
+    const token = generateToken(user._id, user.role);
 
     res.status(201).json({
       message: 'User created successfully',
@@ -74,8 +74,8 @@ exports.login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate token with role
+    const token = generateToken(user._id, user.role);
 
     res.json({
       message: 'Login successful',
@@ -112,4 +112,3 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-  

@@ -9,34 +9,27 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const fetchIssues = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        
-        // Fetch all issues
+
         const allRes = await fetch('http://localhost:5000/api/issues', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        // Fetch user's issues
+
         const userRes = await fetch('http://localhost:5000/api/issues/user', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (!allRes.ok || !userRes.ok) {
-          throw new Error('Failed to fetch issues');
-        }
-        
+
+        if (!allRes.ok || !userRes.ok) throw new Error('Failed to fetch issues');
+
         const allData = await allRes.json();
         const userData = await userRes.json();
-        
+
         setIssues(allData.issues || allData);
         setUserIssues(userData);
       } catch (err) {
@@ -52,42 +45,29 @@ export default function Dashboard() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'In Progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'Resolved':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800';
+      case 'In Progress': return 'bg-blue-100 text-blue-800';
+      case 'Resolved': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getCategoryIcon = (category) => {
     switch (category) {
-      case 'Infrastructure':
-        return '🏗️';
-      case 'Traffic':
-        return '🚦';
-      case 'Environment':
-        return '🌱';
-      case 'Safety':
-        return '⚠️';
-      default:
-        return '📋';
+      case 'Infrastructure': return '🏗️';
+      case 'Traffic': return '🚦';
+      case 'Environment': return '🌱';
+      case 'Safety': return '⚠️';
+      default: return '📋';
     }
   };
 
   const getCurrentIssues = () => {
     switch (activeTab) {
-      case 'my':
-        return userIssues;
-      case 'pending':
-        return issues.filter(issue => issue.status === 'Pending');
-      case 'resolved':
-        return issues.filter(issue => issue.status === 'Resolved');
-      default:
-        return issues;
+      case 'my': return userIssues;
+      case 'pending': return issues.filter(issue => issue.status === 'Pending');
+      case 'resolved': return issues.filter(issue => issue.status === 'Resolved');
+      default: return issues;
     }
   };
 
@@ -112,91 +92,55 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <span className="text-2xl">📋</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Issues</p>
-                <p className="text-2xl font-bold text-gray-900">{issues.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <span className="text-2xl">👤</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">My Reports</p>
-                <p className="text-2xl font-bold text-gray-900">{userIssues.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <span className="text-2xl">⏳</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {issues.filter(issue => issue.status === 'Pending').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <span className="text-2xl">✅</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Resolved</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {issues.filter(issue => issue.status === 'Resolved').length}
-                </p>
-              </div>
-            </div>
-          </div>
+          <StatCard icon="📋" label="Total Issues" value={issues.length} color="blue" />
+          <StatCard icon="👤" label="My Reports" value={userIssues.length} color="purple" />
+          <StatCard icon="⏳" label="Pending" value={issues.filter(i => i.status === 'Pending').length} color="yellow" />
+          <StatCard icon="✅" label="Resolved" value={issues.filter(i => i.status === 'Resolved').length} color="green" />
         </div>
 
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-medium text-gray-900">Issues</h2>
-              <Link
-                to="/report"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Report New Issue
-              </Link>
+              {isAdmin ? (
+                <Link
+                  to="/admin"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Go to Admin Panel
+                </Link>
+              ) : (
+                <Link
+                  to="/report"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Report New Issue
+                </Link>
+              )}
             </div>
-            
+
             {/* Tabs */}
             <div className="flex space-x-1">
               {[
                 { id: 'all', label: 'All Issues', count: issues.length },
-                { id: 'my', label: 'My Reports', count: userIssues.length },
-                { id: 'pending', label: 'Pending', count: issues.filter(issue => issue.status === 'Pending').length },
-                { id: 'resolved', label: 'Resolved', count: issues.filter(issue => issue.status === 'Resolved').length }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {tab.label} ({tab.count})
-                </button>
-              ))}
+                !isAdmin && { id: 'my', label: 'My Reports', count: userIssues.length },
+                { id: 'pending', label: 'Pending', count: issues.filter(i => i.status === 'Pending').length },
+                { id: 'resolved', label: 'Resolved', count: issues.filter(i => i.status === 'Resolved').length }
+              ]
+                .filter(Boolean)
+                .map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {tab.label} ({tab.count})
+                  </button>
+                ))}
             </div>
           </div>
 
@@ -215,10 +159,9 @@ export default function Dashboard() {
               <div className="text-4xl mb-4">📝</div>
               <p className="text-lg mb-2">No issues found</p>
               <p className="text-sm">
-                {activeTab === 'my' 
+                {activeTab === 'my'
                   ? "You haven't reported any issues yet. Start by reporting one!"
-                  : "No issues match your current filter."
-                }
+                  : "No issues match your current filter."}
               </p>
             </div>
           ) : (
@@ -228,27 +171,16 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {issue.title}
-                        </h3>
+                        <h3 className="text-lg font-medium text-gray-900">{issue.title}</h3>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(issue.status)}`}>
                           {issue.status}
                         </span>
                       </div>
                       <p className="text-gray-600 mb-3">{issue.description}</p>
                       <div className="flex items-center space-x-6 text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <span className="mr-1">📍</span>
-                          {issue.location}
-                        </div>
-                        <div className="flex items-center">
-                          <span className="mr-1">{getCategoryIcon(issue.category)}</span>
-                          {issue.category}
-                        </div>
-                        <div className="flex items-center">
-                          <span className="mr-1">🕒</span>
-                          {new Date(issue.createdAt).toLocaleDateString()}
-                        </div>
+                        <div className="flex items-center"><span className="mr-1">📍</span>{issue.location}</div>
+                        <div className="flex items-center"><span className="mr-1">{getCategoryIcon(issue.category)}</span>{issue.category}</div>
+                        <div className="flex items-center"><span className="mr-1">🕒</span>{new Date(issue.createdAt).toLocaleDateString()}</div>
                       </div>
                     </div>
                     {issue.imagePath && (
@@ -265,6 +197,29 @@ export default function Dashboard() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, color }) {
+  const bgColor = {
+    blue: 'bg-blue-100',
+    purple: 'bg-purple-100',
+    yellow: 'bg-yellow-100',
+    green: 'bg-green-100',
+  }[color] || 'bg-gray-100';
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow">
+      <div className="flex items-center">
+        <div className={`p-2 ${bgColor} rounded-lg`}>
+          <span className="text-2xl">{icon}</span>
+        </div>
+        <div className="ml-4">
+          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
         </div>
       </div>
     </div>
