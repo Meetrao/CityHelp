@@ -7,6 +7,8 @@ import AdminPanel from './pages/AdminPanel';
 import MapView from './pages/MapView';
 import Header from './components/Header';
 import { AuthProvider } from './contexts/AuthContext';
+import 'leaflet/dist/leaflet.css';
+
 
 function App() {
   return (

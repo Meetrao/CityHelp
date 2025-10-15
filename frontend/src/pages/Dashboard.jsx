@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [filters, setFilters] = useState({
+    department: '',
+    status: ''
+  });
+
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -62,16 +67,26 @@ export default function Dashboard() {
     }
   };
 
-  const getCurrentIssues = () => {
-    switch (activeTab) {
-      case 'my': return userIssues;
-      case 'pending': return issues.filter(issue => issue.status === 'Pending');
-      case 'resolved': return issues.filter(issue => issue.status === 'Resolved');
-      default: return issues;
+  const currentIssues = useMemo(() => {
+    if (isAdmin) {
+      return issues.filter(issue => {
+        const matchDept = filters.department
+          ? issue.description?.includes(`Assigned to ${filters.department}`)
+          : true;
+        const matchStatus = filters.status
+          ? issue.status === filters.status
+          : true;
+        return matchDept && matchStatus;
+      });
+    } else {
+      switch (activeTab) {
+        case 'my': return userIssues;
+        case 'pending': return issues.filter(issue => issue.status === 'Pending');
+        case 'resolved': return issues.filter(issue => issue.status === 'Resolved');
+        default: return issues;
+      }
     }
-  };
-
-  const currentIssues = getCurrentIssues();
+  }, [filters, issues, userIssues, activeTab, isAdmin]);
 
   if (loading) {
     return (
@@ -97,7 +112,75 @@ export default function Dashboard() {
           <StatCard icon="⏳" label="Pending" value={issues.filter(i => i.status === 'Pending').length} color="yellow" />
           <StatCard icon="✅" label="Resolved" value={issues.filter(i => i.status === 'Resolved').length} color="green" />
         </div>
+
         <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium text-gray-900">Issues</h2>
+              {isAdmin ? (
+                <Link to="/admin" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                  Go to Admin Panel
+                </Link>
+              ) : (
+                <Link to="/report" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                  Report New Issue
+                </Link>
+              )}
+            </div>
+
+            {isAdmin ? (
+              <div className="flex flex-wrap gap-4 mb-4">
+                <select
+                  value={filters.department}
+                  onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="">All Departments</option>
+                  <option value="Roads">Roads</option>
+                  <option value="Sanitation">Sanitation</option>
+                  <option value="Electricity">Electricity</option>
+                  <option value="Drainage">Drainage</option>
+                  <option value="Traffic">Traffic</option>
+                  <option value="Disaster Management">Disaster Management</option>
+                  <option value="Environment">Environment</option>
+                  <option value="General">General</option>
+                </select>
+
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Resolved">Resolved</option>
+                </select>
+              </div>
+            ) : (
+              <div className="flex space-x-1">
+                {[
+                  { id: 'all', label: 'All Issues', count: issues.length },
+                  { id: 'my', label: 'My Reports', count: userIssues.length },
+                  { id: 'pending', label: 'Pending', count: issues.filter(i => i.status === 'Pending').length },
+                  { id: 'resolved', label: 'Resolved', count: issues.filter(i => i.status === 'Resolved').length }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {tab.label} ({tab.count})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {error ? (
             <div className="p-6 text-center">
               <div className="text-red-600 mb-4">{error}</div>
@@ -113,7 +196,9 @@ export default function Dashboard() {
               <div className="text-4xl mb-4">📝</div>
               <p className="text-lg mb-2">No issues found</p>
               <p className="text-sm">
-                {activeTab === 'my'
+                {isAdmin
+                  ? "No issues match your current filters."
+                  : activeTab === 'my'
                   ? "You haven't reported any issues yet. Start by reporting one!"
                   : "No issues match your current filter."}
               </p>
