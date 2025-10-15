@@ -3,7 +3,6 @@ import { jwtDecode } from 'jwt-decode';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import ReportIssue from './pages/ReportIssue';
-import Leaderboard from './pages/Leaderboard';
 import AdminPanel from './pages/AdminPanel';
 import MapView from './pages/MapView';
 import Header from './components/Header';
@@ -19,7 +18,6 @@ function App() {
             <Route path="/" element={<LoginPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/report" element={<ProtectedRoute><ReportIssue /></ProtectedRoute>} />
-            <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/map" element={<ProtectedRoute><MapView /></ProtectedRoute>} />
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin']}>

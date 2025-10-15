@@ -2,15 +2,16 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const multer = require('multer');
-const { 
-  reportIssue, 
-  getAllIssues, 
-  getUserIssues, 
-  updateIssueStatus, 
+const {
+  reportIssue,
+  getAllIssues,
+  getUserIssues,
+  updateIssueStatus,
+  updateIssueNotes,
   deleteIssue,
-  classifyImageHandler // 🧠 New controller for testing classification
+  classifyImageHandler
 } = require('../controllers/issueController');
-const { verifyToken, requireAdmin } = require('../middleware/auth');
+const { verifyToken, authorizeAdmin } = require('../middleware/auth');
 const { issueValidation } = require('../middleware/validation');
 
 const storage = multer.diskStorage({
@@ -22,19 +23,29 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Public routes
 router.get('/issues', getAllIssues);
-
-// Protected routes
 router.get('/issues/user', verifyToken, getUserIssues);
-router.post('/report', verifyToken, upload.single('image'), issueValidation, reportIssue);
+
+router.post('/report', verifyToken, upload.single('image'), issueValidation, (req, res, next) => {
+  const { latitude, longitude } = req.body;
+
+  if (latitude && longitude) {
+    req.body.location = {
+      type: 'Point',
+      coordinates: [parseFloat(longitude), parseFloat(latitude)]
+    };
+  }
+
+  reportIssue(req, res, next);
+});
+
 router.put('/issues/:issueId/status', verifyToken, updateIssueStatus);
 router.delete('/issues/:issueId', verifyToken, deleteIssue);
-
-// 🧪 Optional: Test classifier directly
 router.post('/issues/classify-image', verifyToken, upload.single('image'), classifyImageHandler);
 
-// Admin routes
-router.get('/admin/issues', verifyToken, requireAdmin, getAllIssues);
+router.get('/admin/issues', verifyToken, authorizeAdmin, getAllIssues);
+router.put('/admin/issues/:issueId/status', verifyToken, authorizeAdmin, updateIssueStatus);
+router.put('/admin/issues/:issueId/notes', verifyToken, authorizeAdmin, updateIssueNotes);
 
 module.exports = router;
+

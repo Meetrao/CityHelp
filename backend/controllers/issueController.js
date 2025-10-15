@@ -3,7 +3,6 @@ const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
 const { validationResult } = require('express-validator');
-const { classify } = require('../utils/classifier');
 const Issue = require('../models/Issue');
 const User = require('../models/User');
 
@@ -11,8 +10,18 @@ exports.getAllIssues = async (req, res) => {
   try {
     const { status, category, page = 1, limit = 10 } = req.query;
     const filter = {};
-    if (status) filter.status = status;
-    if (category) filter.category = category;
+
+    if (status && status !== 'all') {
+      const formattedStatus = status
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      filter.status = formattedStatus;
+    }
+
+    if (category && category !== 'all') {
+      filter.category = category;
+    }
 
     const issues = await Issue.find(filter)
       .populate('reportedBy', 'name email')
@@ -38,8 +47,18 @@ exports.getUserIssues = async (req, res) => {
   try {
     const { status, category } = req.query;
     const filter = { reportedBy: req.user._id };
-    if (status) filter.status = status;
-    if (category) filter.category = category;
+
+    if (status && status !== 'all') {
+      const formattedStatus = status
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      filter.status = formattedStatus;
+    }
+
+    if (category && category !== 'all') {
+      filter.category = category;
+    }
 
     const issues = await Issue.find(filter).sort({ createdAt: -1 });
     res.json(issues);
@@ -95,6 +114,7 @@ exports.reportIssue = async (req, res) => {
       category,
       department,
       imageData,
+      imagePath,
       status: 'Pending',
       reportedBy: req.user._id
     });
@@ -144,6 +164,28 @@ exports.updateIssueStatus = async (req, res) => {
   } catch (err) {
     console.error('Error updating issue status:', err);
     res.status(500).json({ message: 'Error updating issue status', error: err.message });
+  }
+};
+
+exports.updateIssueNotes = async (req, res) => {
+  try {
+    const { issueId } = req.params;
+    const { notes } = req.body;
+
+    const issue = await Issue.findByIdAndUpdate(
+      issueId,
+      { notes },
+      { new: true }
+    ).populate('reportedBy', 'name email');
+
+    if (!issue) {
+      return res.status(404).json({ message: 'Issue not found' });
+    }
+
+    res.json(issue);
+  } catch (err) {
+    console.error('Error updating issue notes:', err);
+    res.status(500).json({ message: 'Error updating issue notes', error: err.message });
   }
 };
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.heat';
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -14,13 +15,12 @@ L.Icon.Default.mergeOptions({
 // Custom icons for different issue types
 const createCustomIcon = (category, status) => {
   const color = status === 'Resolved' ? 'green' : status === 'In Progress' ? 'blue' : 'red';
-  const icon = L.divIcon({
+  return L.divIcon({
     className: 'custom-div-icon',
     html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   });
-  return icon;
 };
 
 // Component to center map on user location
@@ -31,6 +31,32 @@ function MapCenter({ center }) {
       map.setView(center, 13);
     }
   }, [map, center]);
+  return null;
+}
+
+// Component to render heatmap layer
+function HeatLayer({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || points.length === 0) return;
+
+    const heat = L.heatLayer(points, {
+      radius: 25,
+      blur: 15,
+      maxZoom: 17,
+      gradient: {
+        0.2: 'blue',
+        0.4: 'lime',
+        0.6: 'orange',
+        0.8: 'red'
+      }
+    }).addTo(map);
+
+    return () => {
+      map.removeLayer(heat);
+    };
+  }, [map, points]);
+
   return null;
 }
 
@@ -46,15 +72,10 @@ export default function MapView() {
       try {
         setLoading(true);
         const res = await fetch('http://localhost:5000/api/issues');
-        
-        if (!res.ok) {
-          throw new Error('Failed to fetch issues');
-        }
-
+        if (!res.ok) throw new Error('Failed to fetch issues');
         const data = await res.json();
         const issuesData = data.issues || data;
-        
-        // Parse coordinates from location string
+
         const issuesWithCoords = issuesData.map(issue => {
           let coords = null;
           if (issue.location && issue.location.includes(',')) {
@@ -64,7 +85,7 @@ export default function MapView() {
             }
           }
           return { ...issue, coords };
-        }).filter(issue => issue.coords); // Only include issues with valid coordinates
+        }).filter(issue => issue.coords);
 
         setIssues(issuesWithCoords);
       } catch (err) {
@@ -75,20 +96,17 @@ export default function MapView() {
       }
     };
 
-    // Get user location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation([position.coords.latitude, position.coords.longitude]);
         },
-        (err) => {
-          console.error('Error getting location:', err);
-          // Default to a central location if geolocation fails
-          setUserLocation([40.7128, -74.0060]); // New York City
+        () => {
+          setUserLocation([19.076, 72.8777]); // Mumbai fallback
         }
       );
     } else {
-      setUserLocation([40.7128, -74.0060]); // Default location
+      setUserLocation([19.076, 72.8777]);
     }
 
     fetchIssues();
@@ -96,31 +114,24 @@ export default function MapView() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Resolved':
-        return 'text-green-600';
-      case 'In Progress':
-        return 'text-blue-600';
-      case 'Pending':
-        return 'text-yellow-600';
-      default:
-        return 'text-gray-600';
+      case 'Resolved': return 'text-green-600';
+      case 'In Progress': return 'text-blue-600';
+      case 'Pending': return 'text-yellow-600';
+      default: return 'text-gray-600';
     }
   };
 
   const getCategoryIcon = (category) => {
     switch (category) {
-      case 'Infrastructure':
-        return '🏗️';
-      case 'Traffic':
-        return '🚦';
-      case 'Environment':
-        return '🌱';
-      case 'Safety':
-        return '⚠️';
-      default:
-        return '📋';
+      case 'Infrastructure': return '🏗️';
+      case 'Traffic': return '🚦';
+      case 'Environment': return '🌱';
+      case 'Safety': return '⚠️';
+      default: return '📋';
     }
   };
+
+  const heatmapPoints = issues.map(issue => [issue.coords.lat, issue.coords.lng, 0.5]);
 
   if (loading) {
     return (
@@ -134,16 +145,14 @@ export default function MapView() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="p-6 text-center">
+        <div className="text-red-600 mb-4">{error}</div>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -157,59 +166,46 @@ export default function MapView() {
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Pending</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">In Progress</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Resolved</span>
-                </div>
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Pending</span>
               </div>
-              <div className="text-sm text-gray-500">
-                {issues.length} issues on map
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">In Progress</span>
               </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Resolved</span>
+              </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              {issues.length} issues on map
             </div>
           </div>
 
           <div className="h-96">
             {userLocation && (
-              <MapContainer
-                center={userLocation}
-                zoom={13}
-                style={{ height: '100%', width: '100%' }}
-              >
+              <MapContainer center={userLocation} zoom={13} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  attribution='&copy; OpenStreetMap contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                
                 <MapCenter center={userLocation} />
-                
-                {issues.map((issue) => (
+                <HeatLayer points={heatmapPoints} />
+                {issues.map(issue => (
                   <Marker
                     key={issue._id}
                     position={[issue.coords.lat, issue.coords.lng]}
                     icon={createCustomIcon(issue.category, issue.status)}
-                    eventHandlers={{
-                      click: () => setSelectedIssue(issue)
-                    }}
+                    eventHandlers={{ click: () => setSelectedIssue(issue) }}
                   >
                     <Popup>
                       <div className="p-2">
-                        <h3 className="font-medium text-gray-900 mb-1">
-                          {issue.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {issue.description}
-                        </p>
+                        <h3 className="font-medium text-gray-900 mb-1">{issue.title}</h3>
+                        <p className="text-sm text-gray-600 mb-2">{issue.description}</p>
                         <div className="flex items-center space-x-2 mb-2">
                           <span className="text-lg">{getCategoryIcon(issue.category)}</span>
                           <span className="text-sm text-gray-500">{issue.category}</span>
@@ -235,9 +231,7 @@ export default function MapView() {
             <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Issue Details
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900">Issue Details</h3>
                   <button
                     onClick={() => setSelectedIssue(null)}
                     className="text-gray-400 hover:text-gray-600"
@@ -245,13 +239,13 @@ export default function MapView() {
                     ✕
                   </button>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium text-gray-900">{selectedIssue.title}</h4>
                     <p className="text-gray-600 mt-1">{selectedIssue.description}</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-500">Location</label>
@@ -277,7 +271,7 @@ export default function MapView() {
                       </p>
                     </div>
                   </div>
-                  
+
                   {selectedIssue.imagePath && (
                     <div>
                       <label className="text-sm font-medium text-gray-500">Image</label>

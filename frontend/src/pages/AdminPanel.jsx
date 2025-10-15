@@ -16,7 +16,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 export default function AdminPanel() {
   const [issues, setIssues] = useState([]);
   const [users, setUsers] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('All');
   const [loadingIssues, setLoadingIssues] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +29,9 @@ export default function AdminPanel() {
       if (!token) return console.error('No token found');
       try {
         setLoadingIssues(true);
-        const res = await fetch(`http://localhost:5000/api/admin/issues?status=${filter}`, {
+        const normalized = filter.toLowerCase();
+        const query = normalized === 'all' ? '' : `?status=${normalized}`;
+        const res = await fetch(`http://localhost:5000/api/admin/issues${query}`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -70,9 +72,10 @@ export default function AdminPanel() {
   }, [filter]);
 
   const filteredIssues = useMemo(() => {
-    return filter === 'all'
+    const normalized = filter.toLowerCase();
+    return normalized === 'all'
       ? issues
-      : issues.filter(i => i.status?.toLowerCase() === filter.toLowerCase());
+      : issues.filter(i => i.status?.toLowerCase() === normalized);
   }, [issues, filter]);
 
   const changeUserRole = async (userId, newRole) => {
@@ -136,12 +139,12 @@ export default function AdminPanel() {
   if (user?.role !== 'admin') {
     return <div className="p-6 text-center text-red-600">Access denied. Admins only.</div>;
   }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
       {error && <div className="text-red-500 mb-4">{error}</div>}
 
-      {/* Filter Tabs */}
       <div className="flex gap-4 mb-6">
         {['All', 'Pending', 'In Progress', 'Resolved', 'Closed'].map(status => (
           <button
@@ -156,7 +159,6 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* Issues Table */}
       <div className="mb-10">
         <h2 className="text-xl font-semibold mb-4">Reported Issues</h2>
         {loadingIssues ? (
@@ -198,18 +200,17 @@ export default function AdminPanel() {
                       className="border rounded px-2 py-1 w-full"
                       rows={2}
                     />
-             <button
-              onClick={() => updateIssueNotes(issue._id, noteEdits[issue._id] ?? '')}
-              disabled={!noteEdits[issue._id]}
-              className={`mt-1 px-3 py-1 border text-sm rounded ${
-                noteEdits[issue._id]
-                  ? 'border-blue-600 text-blue-600 hover:bg-blue-50'
-                  : 'border-gray-300 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              Save Notes
-            </button>
-
+                    <button
+                      onClick={() => updateIssueNotes(issue._id, noteEdits[issue._id] ?? '')}
+                      disabled={!noteEdits[issue._id]}
+                      className={`mt-1 px-3 py-1 border text-sm rounded ${
+                        noteEdits[issue._id]
+                          ? 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                          : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Save Notes
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -218,7 +219,6 @@ export default function AdminPanel() {
         )}
       </div>
 
-      {/* Users Table */}
       <div className="mb-10">
         <h2 className="text-xl font-semibold mb-4">User Accounts</h2>
         {loadingUsers ? (
@@ -226,7 +226,7 @@ export default function AdminPanel() {
         ) : (
           <table className="w-full border">
             <thead className="bg-gray-100">
-              <tr>
+              <tr>            
                 <th className="p-2 text-left">Name</th>
                 <th className="p-2 text-left">Email</th>
                 <th className="p-2 text-left">Role</th>
@@ -257,8 +257,7 @@ export default function AdminPanel() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Pie Chart */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium mb-4">Issue Status Breakdown</h3>
           <Pie
@@ -278,7 +277,6 @@ export default function AdminPanel() {
           />
         </div>
 
-        {/* Bar Chart */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium mb-4">Issues by Category</h3>
           <Bar

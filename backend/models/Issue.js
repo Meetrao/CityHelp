@@ -11,34 +11,32 @@ const issueSchema = new mongoose.Schema({
     required: true
   },
   location: {
-    type: String,
-    required: true
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true
+    }
   },
-
-  // 🧠 New: Auto-classified category
   category: {
     type: String,
     required: true
   },
-
-  // 🧠 New: Auto-assigned department
   department: {
     type: String,
     default: 'General'
   },
-
-  // 🖼️ New: Store image as binary
   imageData: {
     data: Buffer,
     contentType: String
   },
-
-  // Optional legacy path (still supported)
   imagePath: {
     type: String,
     default: null
   },
-
   status: {
     type: String,
     enum: ['Pending', 'In Progress', 'Resolved', 'Closed'],
@@ -59,10 +57,6 @@ const issueSchema = new mongoose.Schema({
     enum: ['Low', 'Medium', 'High', 'Critical'],
     default: 'Medium'
   },
-  coordinates: {
-    lat: Number,
-    lng: Number
-  },
   tags: [String],
   resolutionNotes: {
     type: String,
@@ -73,17 +67,17 @@ const issueSchema = new mongoose.Schema({
     default: null
   },
   notes: {
-  type: String,
-  default: ''
-}
-
+    type: String,
+    default: ''
+  }
 }, {
   timestamps: true
 });
 
-// Index for better query performance
+// Indexes
 issueSchema.index({ reportedBy: 1, status: 1 });
 issueSchema.index({ category: 1, status: 1 });
 issueSchema.index({ createdAt: -1 });
+issueSchema.index({ location: '2dsphere' }); // 🌍 for geospatial queries
 
 module.exports = mongoose.model('Issue', issueSchema);
