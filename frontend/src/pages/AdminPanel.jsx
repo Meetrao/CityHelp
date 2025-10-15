@@ -20,6 +20,7 @@ export default function AdminPanel() {
   const [loadingIssues, setLoadingIssues] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
+  const [noteEdits, setNoteEdits] = useState({});
   const { user } = useAuth();
   const token = localStorage.getItem('token');
 
@@ -93,10 +94,48 @@ export default function AdminPanel() {
     }
   };
 
+  const updateIssueStatus = async (issueId, newStatus) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/issues/${issueId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update status');
+      setIssues(issues.map(i => i._id === issueId ? { ...i, status: newStatus } : i));
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Failed to update issue status');
+    }
+  };
+
+  const updateIssueNotes = async (issueId, newNotes) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/issues/${issueId}/notes`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: newNotes })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to update notes');
+      setIssues(issues.map(i => i._id === issueId ? { ...i, notes: newNotes } : i));
+      setNoteEdits(prev => ({ ...prev, [issueId]: '' }));
+    } catch (err) {
+      console.error('Error updating notes:', err);
+      alert('Failed to update issue notes');
+    }
+  };
+
   if (user?.role !== 'admin') {
     return <div className="p-6 text-center text-red-600">Access denied. Admins only.</div>;
   }
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
@@ -104,7 +143,7 @@ export default function AdminPanel() {
 
       {/* Filter Tabs */}
       <div className="flex gap-4 mb-6">
-        {['all', 'Pending', 'In Progress', 'Resolved', 'Closed'].map(status => (
+        {['All', 'Pending', 'In Progress', 'Resolved', 'Closed'].map(status => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -130,15 +169,48 @@ export default function AdminPanel() {
                 <th className="p-2 text-left">Status</th>
                 <th className="p-2 text-left">Category</th>
                 <th className="p-2 text-left">Date</th>
+                <th className="p-2 text-left">Notes</th>
               </tr>
             </thead>
             <tbody>
               {filteredIssues.map(issue => (
                 <tr key={issue._id} className="border-t">
                   <td className="p-2">{issue.title}</td>
-                  <td className="p-2">{issue.status}</td>
+                  <td className="p-2">
+                    <select
+                      value={issue.status}
+                      onChange={e => updateIssueStatus(issue._id, e.target.value)}
+                      className="border rounded px-2 py-1"
+                    >
+                      {['Pending', 'In Progress', 'Resolved', 'Closed'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="p-2">{issue.category}</td>
                   <td className="p-2">{new Date(issue.createdAt).toLocaleDateString()}</td>
+                  <td className="p-2">
+                    <textarea
+                      value={noteEdits[issue._id] ?? issue.notes ?? ''}
+                      onChange={e =>
+                        setNoteEdits(prev => ({ ...prev, [issue._id]: e.target.value }))
+                      }
+                      className="border rounded px-2 py-1 w-full"
+                      rows={2}
+                    />
+             <button
+              onClick={() => updateIssueNotes(issue._id, noteEdits[issue._id] ?? '')}
+              disabled={!noteEdits[issue._id]}
+              className={`mt-1 px-3 py-1 border text-sm rounded ${
+                noteEdits[issue._id]
+                  ? 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                  : 'border-gray-300 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Save Notes
+            </button>
+
+                  </td>
                 </tr>
               ))}
             </tbody>

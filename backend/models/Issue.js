@@ -71,7 +71,12 @@ const issueSchema = new mongoose.Schema({
   resolvedAt: {
     type: Date,
     default: null
-  }
+  },
+  notes: {
+  type: String,
+  default: ''
+}
+
 }, {
   timestamps: true
 });

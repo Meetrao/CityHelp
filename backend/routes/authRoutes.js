@@ -9,8 +9,6 @@ const Issue = require('../models/Issue');
 // Public routes
 router.post('/signup', signupValidation, signup);
 router.post('/login', loginValidation, login);
-
-// Protected route: Get logged-in user's profile
 router.get('/profile', verifyToken, getProfile);
 
 // ✅ Admin-only: Get all users
@@ -29,8 +27,8 @@ router.put('/users/:id/role', verifyToken, requireRole('admin'), async (req, res
   const { id } = req.params;
   const { role } = req.body;
 
-  if (!['admin', 'citizen'].includes(role)) {
-    return res.status(400).json({ message: 'Invalid role' });
+  if (!role || !['admin', 'citizen'].includes(role)) {
+    return res.status(400).json({ message: 'Invalid or missing role' });
   }
 
   try {
@@ -70,6 +68,47 @@ router.get('/admin/issues', verifyToken, requireRole('admin'), async (req, res) 
     });
   } catch (err) {
     console.error('Error fetching admin issues:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ✅ Admin-only: Update issue status
+router.put('/admin/issues/:id/status', verifyToken, requireRole('admin'), async (req, res) => {
+  console.log('🔄 Status update request received:', req.params.id, req.body);
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const validStatuses = ['Pending', 'In Progress', 'Resolved', 'Closed'];
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({ message: 'Invalid or missing status' });
+  }
+
+  try {
+    const issue = await Issue.findByIdAndUpdate(id, { status }, { new: true });
+    if (!issue) return res.status(404).json({ message: 'Issue not found' });
+    res.json({ message: 'Status updated', issue });
+  } catch (err) {
+    console.error('Error updating issue status:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ✅ Admin-only: Update issue notes
+router.put('/admin/issues/:id/notes', verifyToken, requireRole('admin'), async (req, res) => {
+  console.log('📝 Notes update request received:', req.params.id, req.body);
+  const { id } = req.params;
+  const { notes } = req.body;
+
+  if (typeof notes !== 'string') {
+    return res.status(400).json({ message: 'Invalid or missing notes' });
+  }
+
+  try {
+    const issue = await Issue.findByIdAndUpdate(id, { notes }, { new: true });
+    if (!issue) return res.status(404).json({ message: 'Issue not found' });
+    res.json({ message: 'Notes updated', issue });
+  } catch (err) {
+    console.error('Error updating issue notes:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
