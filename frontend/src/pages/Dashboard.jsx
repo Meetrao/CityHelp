@@ -1,6 +1,9 @@
+// 📄 File: Dashboard.jsx (First Half)
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://cityhelp.onrender.com";
 
 export default function Dashboard() {
   const [issues, setIssues] = useState([]);
@@ -22,13 +25,14 @@ export default function Dashboard() {
         setLoading(true);
         const token = localStorage.getItem('token');
 
-        const allRes = await fetch('http://localhost:5000/api/issues', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const userRes = await fetch('http://localhost:5000/api/issues/user', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const [allRes, userRes] = await Promise.all([
+          fetch(`${BACKEND_URL}/api/issues`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch(`${BACKEND_URL}/api/issues/user`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
 
         if (!allRes.ok || !userRes.ok) throw new Error('Failed to fetch issues');
 
@@ -100,7 +104,7 @@ export default function Dashboard() {
       </div>
     );
   }
-
+// 📄 File: Dashboard.jsx (Second Half)
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
@@ -117,6 +121,7 @@ export default function Dashboard() {
           <StatCard icon="✅" label="Resolved" value={issues.filter(i => i.status === 'Resolved').length} color="green" />
           <StatCard icon="🔒" label="Closed" value={issues.filter(i => i.status === 'Closed').length} color="red" />
         </div>
+
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center mb-4">
@@ -149,7 +154,6 @@ export default function Dashboard() {
                   <option value="Environment">Environment</option>
                   <option value="General">General</option>
                 </select>
-
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -241,7 +245,7 @@ export default function Dashboard() {
                     {issue.imagePath && (
                       <div className="ml-4">
                         <img
-                          src={`http://localhost:5000/${issue.imagePath}`}
+                          src={`${BACKEND_URL}/${issue.imagePath}`}
                           alt="Issue"
                           className="w-20 h-20 object-cover rounded-lg"
                         />

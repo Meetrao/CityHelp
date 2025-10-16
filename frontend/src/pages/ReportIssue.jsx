@@ -1,5 +1,8 @@
+// 📄 File: ReportIssue.jsx (First Half)
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://cityhelp.onrender.com";
 
 export default function ReportIssue() {
   const [formData, setFormData] = useState({
@@ -55,7 +58,7 @@ export default function ReportIssue() {
         const form = new FormData();
         form.append('image', file);
 
-        const res = await fetch('http://localhost:5000/api/issues/classify-image', {
+        const res = await fetch(`${BACKEND_URL}/api/issues/classify-image`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -97,6 +100,7 @@ export default function ReportIssue() {
       }
     }
   };
+// 📄 File: ReportIssue.jsx (Second Half)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -122,7 +126,7 @@ export default function ReportIssue() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/report', {
+      const res = await fetch(`${BACKEND_URL}/api/report`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
