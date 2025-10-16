@@ -5,7 +5,7 @@ import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
- Legend,
+  Legend,
   CategoryScale,
   LinearScale,
   BarElement
@@ -72,6 +72,14 @@ export default function AdminPanel() {
     fetchIssues();
     setTimeout(fetchUsers, 500);
   }, [filter]);
+
+  const filteredIssues = useMemo(() => {
+    const normalized = filter.toLowerCase();
+    return normalized === 'all'
+      ? issues
+      : issues.filter(i => i.status?.toLowerCase() === normalized);
+  }, [issues, filter]);
+
   const changeUserRole = async (userId, newRole) => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/users/${userId}/role`, {
@@ -133,13 +141,3 @@ export default function AdminPanel() {
   if (user?.role !== 'admin') {
     return <div className="p-6 text-center text-red-600">Access denied. Admins only.</div>;
   }
-
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
-
-      {/* ... rest of JSX already patched and sent above ... */}
-    </div>
-  );
-}
