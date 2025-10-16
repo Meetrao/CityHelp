@@ -9,10 +9,11 @@ require('dotenv').config();
 const app = express();
 
 // 🛡️ Middleware
-app.use(cors({
-  origin: 'https://your-vercel-frontend.vercel.app', // replace with actual Vercel URL
-  credentials: true
-}));
+  app.use(cors({
+    origin: 'https://city-help.vercel.app',
+    credentials: true
+  }));
+
 app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));
 
