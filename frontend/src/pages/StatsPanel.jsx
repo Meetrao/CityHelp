@@ -21,7 +21,7 @@ export default function StatsPanel() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/stats', {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -36,6 +36,7 @@ export default function StatsPanel() {
 
     fetchStats();
   }, []);
+
   if (loading) {
     return <div className="p-6 text-center text-gray-500">Loading statistics...</div>;
   }
@@ -74,7 +75,7 @@ export default function StatsPanel() {
               datasets: [{
                 data: [
                   stats.pending,
-                  stats.inProgress,
+                  stats.inProgress || 0,
                   stats.resolved,
                   stats.closed
                 ],

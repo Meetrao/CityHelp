@@ -53,6 +53,7 @@ export default function Dashboard() {
       case 'Pending': return 'bg-yellow-100 text-yellow-800';
       case 'In Progress': return 'bg-blue-100 text-blue-800';
       case 'Resolved': return 'bg-green-100 text-green-800';
+      case 'Closed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -81,8 +82,10 @@ export default function Dashboard() {
     } else {
       switch (activeTab) {
         case 'my': return userIssues;
-        case 'pending': return issues.filter(issue => issue.status === 'Pending');
-        case 'resolved': return issues.filter(issue => issue.status === 'Resolved');
+        case 'pending': return issues.filter(i => i.status === 'Pending');
+        case 'inprogress': return issues.filter(i => i.status === 'In Progress');
+        case 'resolved': return issues.filter(i => i.status === 'Resolved');
+        case 'closed': return issues.filter(i => i.status === 'Closed');
         default: return issues;
       }
     }
@@ -106,13 +109,14 @@ export default function Dashboard() {
           <p className="text-gray-600">Monitor and manage reported city issues</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
           <StatCard icon="📋" label="Total Issues" value={issues.length} color="blue" />
           <StatCard icon="👤" label="My Reports" value={userIssues.length} color="purple" />
           <StatCard icon="⏳" label="Pending" value={issues.filter(i => i.status === 'Pending').length} color="yellow" />
+          <StatCard icon="🚧" label="In Progress" value={issues.filter(i => i.status === 'In Progress').length} color="blue" />
           <StatCard icon="✅" label="Resolved" value={issues.filter(i => i.status === 'Resolved').length} color="green" />
+          <StatCard icon="🔒" label="Closed" value={issues.filter(i => i.status === 'Closed').length} color="red" />
         </div>
-
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center mb-4">
@@ -155,6 +159,7 @@ export default function Dashboard() {
                   <option value="Pending">Pending</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Resolved">Resolved</option>
+                  <option value="Closed">Closed</option>
                 </select>
               </div>
             ) : (
@@ -163,7 +168,9 @@ export default function Dashboard() {
                   { id: 'all', label: 'All Issues', count: issues.length },
                   { id: 'my', label: 'My Reports', count: userIssues.length },
                   { id: 'pending', label: 'Pending', count: issues.filter(i => i.status === 'Pending').length },
-                  { id: 'resolved', label: 'Resolved', count: issues.filter(i => i.status === 'Resolved').length }
+                  { id: 'inprogress', label: 'In Progress', count: issues.filter(i => i.status === 'In Progress').length },
+                  { id: 'resolved', label: 'Resolved', count: issues.filter(i => i.status === 'Resolved').length },
+                  { id: 'closed', label: 'Closed', count: issues.filter(i => i.status === 'Closed').length }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -257,6 +264,7 @@ function StatCard({ icon, label, value, color }) {
     purple: 'bg-purple-100',
     yellow: 'bg-yellow-100',
     green: 'bg-green-100',
+    red: 'bg-red-100',
   }[color] || 'bg-gray-100';
 
   return (
