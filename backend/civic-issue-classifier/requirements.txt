@@ -6,3 +6,4 @@ pillow
 speechrecognition
 deep-translator
 requests
+flask
