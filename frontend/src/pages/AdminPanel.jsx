@@ -141,3 +141,164 @@ export default function AdminPanel() {
   if (user?.role !== 'admin') {
     return <div className="p-6 text-center text-red-600">Access denied. Admins only.</div>;
   }
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+
+      <div className="flex gap-4 mb-6">
+        {['All', 'Pending', 'In Progress', 'Resolved', 'Closed'].map(status => (
+          <button
+            key={status}
+            onClick={() => setFilter(status)}
+            className={`px-4 py-2 rounded ${
+              filter === status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold mb-4">Reported Issues</h2>
+        {loadingIssues ? (
+          <div>Loading issues...</div>
+        ) : (
+          <table className="w-full border">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">Title</th>
+                <th className="p-2 text-left">Status</th>
+                <th className="p-2 text-left">Category</th>
+                <th className="p-2 text-left">Date</th>
+                <th className="p-2 text-left">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredIssues.map(issue => (
+                <tr key={issue._id} className="border-t">
+                  <td className="p-2">{issue.title}</td>
+                  <td className="p-2">
+                    <select
+                      value={issue.status}
+                      onChange={e => updateIssueStatus(issue._id, e.target.value)}
+                      className="border rounded px-2 py-1"
+                    >
+                      {['Pending', 'In Progress', 'Resolved', 'Closed'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="p-2">{issue.category}</td>
+                  <td className="p-2">{new Date(issue.createdAt).toLocaleDateString()}</td>
+                  <td className="p-2">
+                    <textarea
+                      value={noteEdits[issue._id] ?? issue.notes ?? ''}
+                      onChange={e =>
+                        setNoteEdits(prev => ({ ...prev, [issue._id]: e.target.value }))
+                      }
+                      className="border rounded px-2 py-1 w-full"
+                      rows={2}
+                    />
+                    <button
+                      onClick={() => updateIssueNotes(issue._id, noteEdits[issue._id] ?? '')}
+                      disabled={!noteEdits[issue._id]}
+                      className={`mt-1 px-3 py-1 border text-sm rounded ${
+                        noteEdits[issue._id]
+                          ? 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                          : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Save Notes
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold mb-4">User Accounts</h2>
+        {loadingUsers ? (
+          <div>Loading users...</div>
+        ) : (
+          <table className="w-full border">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 text-left">Name</th>
+                <th className="p-2 text-left">Email</th>
+                <th className="p-2 text-left">Role</th>
+                <th className="p-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u._id} className="border-t">
+                  <td className="p-2">{u.name}</td>
+                  <td className="p-2">{u.email}</td>
+                  <td className="p-2">{u.role}</td>
+                  <td className="p-2">
+                    <select
+                      value={u.role}
+                      onChange={e => changeUserRole(u._id, e.target.value)}
+                      className="border rounded px-2 py-1"
+                    >
+                      <option value="citizen">Citizen</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium mb-4">Issue Status Breakdown</h3>
+          <Pie
+            data={{
+              labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
+              datasets: [{
+                data: [
+                  issues.filter(i => i.status?.toLowerCase() === 'pending').length,
+                  issues.filter(i => i.status?.toLowerCase() === 'in progress').length,
+                  issues.filter(i => i.status?.toLowerCase() === 'resolved').length,
+                  issues.filter(i => i.status?.toLowerCase() === 'closed').length
+                ],
+                backgroundColor: ['#facc15', '#3b82f6', '#22c55e', '#9ca3af']
+              }]
+            }}
+            options={{ responsive: true, plugins: { legend: { position: 'bottom' } } }}
+          />
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium mb-4">Issues by Category</h3>
+          <Bar
+            data={{
+              labels: [...new Set(issues.map(i => i.category))],
+              datasets: [{
+                label: 'Count',
+                data: [...new Set(issues.map(i => i.category))].map(cat =>
+                  issues.filter(i => i.category === cat).length
+                ),
+                backgroundColor: '#3b82f6'
+              }]
+            }}
+            options={{
+              responsive: true,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true } }
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
