@@ -6,6 +6,17 @@ const { validationResult } = require('express-validator');
 const Issue = require('../models/Issue');
 const User = require('../models/User');
 
+const departmentMap = {
+  pothole: 'Roads',
+  garbage: 'Sanitation',
+  wire: 'Electricity',
+  waterlogging: 'Drainage',
+  flood: 'Disaster Management',
+  signal: 'Traffic',
+  streetlight: 'Electricity',
+  unknown: 'General'
+};
+
 exports.getAllIssues = async (req, res) => {
   try {
     const { status, category, page = 1, limit = 10 } = req.query;
@@ -79,24 +90,21 @@ exports.reportIssue = async (req, res) => {
 
   try {
     let category = 'general';
+    let department = 'General';
+    let fakeStatus = 'Unknown';
+
     if (imagePath) {
       const form = new FormData();
       form.append('image', fs.createReadStream(imagePath));
-      const response = await axios.post('http://localhost:5001/classify', form, {
+
+      const response = await axios.post(process.env.FLASK_API_URL, form, {
         headers: form.getHeaders()
       });
-      category = response.data.category || 'general';
-    }
 
-    const departmentMap = {
-      pothole: 'Roads',
-      garbage: 'Sanitation',
-      wire: 'Electricity',
-      waterlogging: 'Drainage',
-      flood: 'Disaster Management',
-      signal: 'Traffic'
-    };
-    const department = departmentMap[category] || 'General';
+      category = response.data.category || 'general';
+      department = response.data.department || departmentMap[category] || 'General';
+      fakeStatus = response.data.fakeStatus || 'Unknown';
+    }
 
     let imageData = null;
     if (imagePath) {
@@ -116,6 +124,7 @@ exports.reportIssue = async (req, res) => {
       imageData,
       imagePath,
       status: 'Pending',
+      fakeStatus,
       reportedBy: req.user._id
     });
 
@@ -221,14 +230,15 @@ exports.classifyImageHandler = async (req, res) => {
     const form = new FormData();
     form.append('image', fs.createReadStream(imagePath));
 
-    const response = await axios.post('http://localhost:5001/classify', form, {
+    const response = await axios.post(process.env.FLASK_API_URL, form, {
       headers: form.getHeaders()
     });
 
     const category = response.data.category || 'general';
-    console.log('Image classified as:', category);
+    const department = response.data.department || departmentMap[category] || 'General';
+    const fakeStatus = response.data.fakeStatus || 'Unknown';
 
-    res.json({ category });
+    res.json({ category, department, fakeStatus });
   } catch (err) {
     console.error('Error classifying image:', err);
     res.status(500).json({ 

@@ -9,7 +9,10 @@ require('dotenv').config();
 const app = express();
 
 // 🛡️ Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'https://your-vercel-frontend.vercel.app', // replace with actual Vercel URL
+  credentials: true
+}));
 app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));
 
@@ -30,7 +33,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => {
     console.error('❌ MongoDB connection failed:', err.message);
-    process.exit(1); // Exit if DB fails
+    process.exit(1);
   });
 
 // 🚀 Server Start
