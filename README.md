@@ -4,7 +4,7 @@
 
 ### AI-Powered Civic Issue Reporting Platform
 
-*Built with ❤️ by [@Meetrao](https://github.com/Meetrao) — because your city deserves better.*
+*Built with ❤️ — because your city deserves better.*
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=for-the-badge)](https://city-help.vercel.app)
 [![Backend API](https://img.shields.io/badge/Backend-API-green?style=for-the-badge)](https://cityhelp.onrender.com)
@@ -333,7 +333,7 @@ See [LICENSE](LICENSE) for more details.
 
 <div align="center">
 
-### Built with ❤️ by **Meet Rao**
+### **
 
 [![GitHub](https://img.shields.io/badge/GitHub-@Meetrao-181717?style=for-the-badge&logo=github)](https://github.com/Meetrao)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/meet-rao-a99a00276)
@@ -353,3 +353,4 @@ See [LICENSE](LICENSE) for more details.
 Made with 💙 for better civic engagement
 
 </div>
+
