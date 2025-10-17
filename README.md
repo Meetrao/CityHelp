@@ -333,7 +333,7 @@ See [LICENSE](LICENSE) for more details.
 
 <div align="center">
 
-### **
+###
 
 [![GitHub](https://img.shields.io/badge/GitHub-@Meetrao-181717?style=for-the-badge&logo=github)](https://github.com/Meetrao)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/meet-rao-a99a00276)
@@ -353,4 +353,5 @@ See [LICENSE](LICENSE) for more details.
 Made with 💙 for better civic engagement
 
 </div>
+
 
