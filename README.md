@@ -14,7 +14,7 @@
 
 ---
 
-## 🌟 What It Does
+## 🌟 What It Does  
 
 **CityHelp.AI** empowers citizens to report civic issues like potholes, garbage piles, broken streetlights, and more—all with just a photo and description. Our AI-powered platform automatically generates captions for uploaded images, helps admins efficiently manage and resolve issues, and provides insightful data visualizations to track civic health.
 
